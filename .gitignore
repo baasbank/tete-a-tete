@@ -4,3 +4,4 @@ utils
 config
 .vscode
 app.py
+.env
