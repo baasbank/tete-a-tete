@@ -15,6 +15,11 @@ def channel_info(channel_id):
         return channel_info
   return None
 
+def user_group_info(user_group_id):
+  group_info = slack_client.api_call("usergroups.users.list", usergroup=user_group_id)
+  if group_info.get('ok'):
+    return group_info
+  return None
 
 def send_dms(user_id, message):
   slack_client.api_call(
@@ -26,7 +31,14 @@ def send_dms(user_id, message):
 @app.route('/tete', methods=['POST'])
 def send_dm():
   text = request.form.get('text')
-  if text[1] == '#':
+  if text[1] == '@':
+    group_type = 'usergroup'
+    usergroup_id = text.split(' ')[0].split('|')[0][2:]
+    remove_usergroup_name = text.split(' ')
+    del remove_usergroup_name[0]
+    text = ' '.join(remove_usergroup_name)
+  elif text[1] == '#':
+    group_type = 'channel'
     channel_id = text.split(' ')[0].split('|')[0][2:]
     remove_channel_name = text.split(' ')
     del remove_channel_name[0]
@@ -34,10 +46,18 @@ def send_dm():
   else:  
     channel_id = request.form.get('channel_id')
 
-  channel_information = channel_info(channel_id)
-  channel_or_group_members = channel_information['channel']['members']
-  for i in range(0, len(channel_or_group_members)):
-      send_dms(channel_or_group_members[i], text)
+  if group_type == 'channel':
+    channel_information = channel_info(channel_id)
+    channel_members = channel_information['channel']['members']
+    for i in range(0, len(channel_members)):
+        send_dms(channel_members[i], text)
+
+  if group_type == 'usergroup':
+    group_information = user_group_info(usergroup_id)
+    group_members = group_information['users']
+    for i in range(0, len(group_members)):
+        send_dms(group_members[i], text)
+
   return 'Message Sent!', 200
 
 
